@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  .wrap{max-width:860px;margin:0 auto;font-family:'Segoe UI',system-ui,sans-serif;background:#f8f9fb;padding:24px 16px}
+  .header{text-align:center;margin-bottom:24px}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;color:#4a90d9;text-transform:uppercase;margin-bottom:8px}
+  .chart-h1{font-size:24px;font-weight:800;color:#1e3a6e;margin-bottom:8px}
+  .subtitle{color:#555;font-size:13px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .stat{background:#fff;border-radius:10px;padding:16px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .stat.blue{border-top:3px solid #1e3a6e}
+  .stat.red{border-top:3px solid #c0392b}
+  .stat-val{font-size:20px;font-weight:800;line-height:1.1}
+  .stat.blue .stat-val{color:#1e3a6e}
+  .stat.red .stat-val{color:#c0392b}
+  .stat-label{font-size:10px;font-weight:700;color:#333;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+  .stat-sub{font-size:10px;color:#888;margin-top:2px}
+  .callout{background:#1e3a6e18;border:1px solid #1e3a6e30;border-radius:10px;padding:11px 14px;margin-bottom:20px;font-size:13px;color:#333;text-align:center}
+  .card{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.08);overflow:hidden}
+  .tabs{display:flex;border-bottom:1px solid #eee}
+  .tab{flex:1;padding:13px 8px;border:none;background:transparent;color:#555;font-weight:600;font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
+  .tab.active{background:#1e3a6e;color:#fff}
+  .chart-wrap{padding:20px 12px 12px;display:none}
+  .chart-wrap.active{display:block}
+  .chart-title{text-align:center;margin-bottom:12px}
+  .chart-title h3{font-size:14px;font-weight:700;color:#1e3a6e;margin-bottom:2px}
+  .chart-title.red h3{color:#c0392b}
+  .chart-title p{font-size:11px;color:#888}
+  canvas{max-height:280px}
+  .footer-note{text-align:center;margin-top:14px;font-size:10px;color:#aaa}
+  @media(max-width:500px){
+    .stats{grid-template-columns:1fr 1fr}
+    .stats .stat:last-child{grid-column:1/-1}
+    h1{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow">The Cost of Inaction</div>
+    <div class="chart-h1">U.S. Climate &amp; Weather Disasters</div>
+    <p class="subtitle">1980–2024 · Billion-Dollar Events · Source: NOAA</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat blue"><div class="stat-val">$2,917B</div><div class="stat-label">Total Economic Damage</div><div class="stat-sub">inflation-adjusted</div></div>
+    <div class="stat red"><div class="stat-val">16,918</div><div class="stat-label">Lives Lost</div><div class="stat-sub">across all events</div></div>
+    <div class="stat blue"><div class="stat-val">426</div><div class="stat-label">Billion-Dollar Events</div><div class="stat-sub">since 1980</div></div>
+  </div>
+
+  <div class="callout">📈 Average annual damage jumped from <b>~$39B</b> (pre-1995) to <b>~$150B</b> (2015–2024) — a <b>285% increase</b></div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('cost',this)">Economic Damage</button>
+      <button class="tab" onclick="switchTab('deaths',this)">Lives Lost</button>
+      <button class="tab" onclick="switchTab('decade',this)">By Decade</button>
+    </div>
+
+    <div id="cost" class="chart-wrap active">
+      <div class="chart-title"><h3>Annual Economic Damage from Billion-Dollar Disasters</h3><p>Inflation-adjusted, in billions USD</p></div>
+      <canvas id="costChart"></canvas>
+    </div>
+    <div id="deaths" class="chart-wrap">
+      <div class="chart-title red"><h3>Annual Deaths from Billion-Dollar Disasters</h3><p>Total fatalities per year</p></div>
+      <canvas id="deathChart"></canvas>
+    </div>
+    <div id="decade" class="chart-wrap">
+      <div class="chart-title"><h3>Cumulative Impact by Decade</h3><p>Total damage and deaths per decade</p></div>
+      <canvas id="decadeChart"></canvas>
+    </div>
+  </div>
+
+  <div class="footer-note">Data: NOAA National Centers for Environmental Information · Values inflation-adjusted to 2024 dollars</div>
+</div>
+
+<script>
+const raw=[
+  {y:1980,c:2749.4,d:7},{y:1980,c:2236.2,d:13},{y:1980,c:40681.2,d:1260},{y:1980,c:2076.4,d:0},{y:1980,c:1409.1,d:20},
+  {y:1982,c:2217.8,d:85},{y:1982,c:1604,d:33},{y:1982,c:1579,d:30},
+  {y:1983,c:4946.2,d:45},{y:1983,c:4828.7,d:50},{y:1983,c:9450,d:21},{y:1983,c:9574,d:0},{y:1983,c:1252,d:14},{y:1983,c:6479.5,d:151},
+  {y:1984,c:1851.6,d:80},{y:1984,c:1356.4,d:1},
+  {y:1985,c:3588,d:0},{y:1985,c:2502.4,d:150},{y:1985,c:1758.1,d:89},{y:1985,c:3788.4,d:4},{y:1985,c:2491.3,d:11},{y:1985,c:4340.4,d:63},{y:1985,c:4046,d:62},
+  {y:1986,c:1531.1,d:13},{y:1986,c:5194.5,d:100},{y:1986,c:1144,d:10},
+  {y:1988,c:54610.4,d:454},
+  {y:1989,c:1406.3,d:21},{y:1989,c:1485.9,d:11},{y:1989,c:22679.7,d:86},{y:1989,c:7838.3,d:0},{y:1989,c:5220,d:10},{y:1989,c:1700.4,d:100},
+  {y:1990,c:2456.9,d:13},{y:1990,c:1984.5,d:0},{y:1990,c:1716,d:17},
+  {y:1991,c:8432,d:0},{y:1991,c:1509.4,d:0},{y:1991,c:3471.8,d:18},{y:1991,c:7039.8,d:0},{y:1991,c:7590,d:25},
+  {y:1992,c:1817.9,d:0},{y:1992,c:2157,d:0},{y:1992,c:1683.1,d:0},{y:1992,c:60480,d:61},{y:1992,c:6913,d:7},{y:1992,c:1458.5,d:26},{y:1992,c:5512.4,d:19},
+  {y:1993,c:12159.4,d:270},{y:1993,c:1403.9,d:1},{y:1993,c:46323.6,d:48},{y:1993,c:2780.2,d:16},{y:1993,c:2976.2,d:4},
+  {y:1994,c:2246.3,d:70},{y:1994,c:6444.9,d:9},{y:1994,c:2108.4,d:3},{y:1994,c:2126.8,d:32},{y:1994,c:2110,d:19},{y:1994,c:1544.4,d:0},
+  {y:1995,c:5250,d:27},{y:1995,c:1196,d:0},{y:1995,c:11357,d:32},{y:1995,c:1751,d:6},{y:1995,c:4326,d:13},{y:1995,c:2027,d:872},{y:1995,c:9612.5,d:27},
+  {y:1996,c:6126.2,d:187},{y:1996,c:2056.9,d:9},{y:1996,c:3654.5,d:0},{y:1996,c:10014,d:37},{y:1996,c:1352,d:1},
+  {y:1997,c:5973.6,d:36},{y:1997,c:1935.5,d:67},{y:1997,c:7279.5,d:11},
+  {y:1998,c:2733.5,d:16},{y:1998,c:1968.7,d:132},{y:1998,c:3164.6,d:1},{y:1998,c:2208.3,d:20},{y:1998,c:1734.5,d:12},{y:1998,c:1351,d:2},{y:1998,c:1891.4,d:3},{y:1998,c:6879.7,d:200},{y:1998,c:11550.1,d:16},{y:1998,c:1808.8,d:31},{y:1998,c:4875,d:0},
+  {y:1999,c:1982.3,d:25},{y:1999,c:1693.4,d:0},{y:1999,c:3823.3,d:55},{y:1999,c:4797.8,d:502},{y:1999,c:12203.2,d:77},
+  {y:2000,c:1320.3,d:4},{y:2000,c:1269.6,d:0},{y:2000,c:1978,d:0},
+  {y:2001,c:1629,d:3},{y:2001,c:9344.8,d:140},{y:2001,c:5508.7,d:3},{y:2001,c:1194.3,d:0},{y:2001,c:15084,d:43},
+  {y:2002,c:3663.9,d:7},{y:2002,c:1932.9,d:2},{y:2002,c:2001,d:5},{y:2002,c:1252.8,d:28},{y:2002,c:2301.8,d:21},{y:2002,c:16031.6,d:0},
+  {y:2003,c:3451,d:3},{y:2003,c:7100.9,d:51},{y:2003,c:1476,d:7},{y:2003,c:1734.2,d:7},{y:2003,c:9322.9,d:55},{y:2003,c:6613.7,d:22},{y:2003,c:8731.1,d:35},
+  {y:2004,c:1693.3,d:4},{y:2004,c:1153.7,d:0},{y:2004,c:26559.2,d:35},{y:2004,c:16268,d:48},{y:2004,c:34031,d:57},{y:2004,c:12444.5,d:28},
+  {y:2005,c:1410,d:0},{y:2005,c:4017,d:15},{y:2005,c:201297.5,d:1833},{y:2005,c:2433.6,d:0},{y:2005,c:29415.2,d:119},{y:2005,c:30020,d:35},
+  {y:2006,c:2113.3,d:10},{y:2006,c:2518.2,d:10},{y:2006,c:3804.9,d:27},{y:2006,c:2358.5,d:20},{y:2006,c:1176.6,d:1},{y:2006,c:9536.7,d:0},{y:2006,c:1371.3,d:1},{y:2006,c:2332.8,d:28},
+  {y:2007,c:2184,d:1},{y:2007,c:3188.5,d:0},{y:2007,c:3836.9,d:9},{y:2007,c:4139.4,d:12},{y:2007,c:5519.7,d:15},
+  {y:2008,c:1463.3,d:12},{y:2008,c:1805.3,d:57},{y:2008,c:1673.9,d:5},{y:2008,c:1528.3,d:2},{y:2008,c:4423.1,d:13},{y:2008,c:2355.7,d:18},{y:2008,c:14838,d:24},{y:2008,c:1812.2,d:3},{y:2008,c:8635.7,d:53},{y:2008,c:43198.4,d:112},{y:2008,c:1777,d:16},{y:2008,c:10444.7,d:0},
+  {y:2009,c:2592.9,d:10},{y:2009,c:2427.9,d:0},{y:2009,c:2116.4,d:6},{y:2009,c:1274.2,d:7},{y:2009,c:1939,d:0},{y:2009,c:1470,d:0},{y:2009,c:1311.8,d:10},{y:2009,c:1477.4,d:10},{y:2009,c:5203.2,d:0},
+  {y:2010,c:1192.8,d:3},{y:2010,c:2692.6,d:11},{y:2010,c:3308.8,d:32},{y:2010,c:4834,d:3},{y:2010,c:1306.7,d:2},{y:2010,c:1375.1,d:0},{y:2010,c:5472,d:0},
+  {y:2011,c:2565.7,d:36},{y:2011,c:3885.3,d:9},{y:2011,c:3051,d:0},{y:2011,c:2882.9,d:38},{y:2011,c:1452.8,d:0},{y:2011,c:14310.7,d:321},{y:2011,c:12735.6,d:177},{y:2011,c:4270.1,d:7},{y:2011,c:2152.3,d:3},{y:2011,c:2863.3,d:5},{y:2011,c:1243.2,d:0},{y:2011,c:1729.1,d:2},{y:2011,c:1600.4,d:0},{y:2011,c:18756.7,d:45},{y:2011,c:17109.5,d:95},{y:2011,c:3492.4,d:21},{y:2011,c:1285.8,d:1},{y:2011,c:2549.1,d:5},
+  {y:2012,c:4317.9,d:42},{y:2012,c:1390.9,d:0},{y:2012,c:1539.4,d:6},{y:2012,c:4488.6,d:1},{y:2012,c:3156.1,d:1},{y:2012,c:3559,d:0},{y:2012,c:3957,d:28},{y:2012,c:3786.1,d:9},{y:2012,c:88453.9,d:159},{y:2012,c:2381.7,d:8},{y:2012,c:41705.2,d:123},
+  {y:2013,c:1253.9,d:1},{y:2013,c:2747.2,d:1},{y:2013,c:1963.8,d:1},{y:2013,c:1464.7,d:4},{y:2013,c:3240.5,d:27},{y:2013,c:2448.4,d:10},{y:2013,c:1406.7,d:0},{y:2013,c:2036.5,d:9},{y:2013,c:1472.2,d:8},{y:2013,c:14283.6,d:53},
+  {y:2014,c:2933.4,d:16},{y:2014,c:1908.1,d:0},{y:2014,c:1221.1,d:0},{y:2014,c:2309.2,d:33},{y:2014,c:1134.5,d:0},{y:2014,c:4938.6,d:0},{y:2014,c:2533.4,d:2},{y:2014,c:1361.9,d:2},{y:2014,c:1862.6,d:0},{y:2014,c:5334.8,d:0},
+  {y:2015,c:3969.3,d:30},{y:2015,c:2069,d:2},{y:2015,c:1707.6,d:0},{y:2015,c:1255.8,d:3},{y:2015,c:1691.9,d:4},{y:2015,c:3375.6,d:31},{y:2015,c:1547.1,d:1},{y:2015,c:2657.6,d:25},{y:2015,c:3996.9,d:12},{y:2015,c:2609.3,d:50},{y:2015,c:6029.3,d:0},
+  {y:2016,c:1383.5,d:10},{y:2016,c:3052.1,d:5},{y:2016,c:1597.6,d:1},{y:2016,c:2725.5,d:0},{y:2016,c:4618.1,d:0},{y:2016,c:3559.1,d:8},{y:2016,c:3160.8,d:6},{y:2016,c:2252.9,d:2},{y:2016,c:1501.5,d:0},{y:2016,c:1288.5,d:23},{y:2016,c:1920,d:0},{y:2016,c:13300,d:13},{y:2016,c:13100,d:49},{y:2016,c:3137.5,d:21},{y:2016,c:4580,d:0},
+  {y:2017,c:1436.5,d:24},{y:2017,c:1950,d:5},{y:2017,c:2347.8,d:6},{y:2017,c:2828.8,d:2},{y:2017,c:1300,d:0},{y:2017,c:3476.6,d:0},{y:2017,c:1259.2,d:1},{y:2017,c:1152,d:0},{y:2017,c:2156.7,d:20},{y:2017,c:4321.5,d:0},{y:2017,c:1214.1,d:1},{y:2017,c:3031.5,d:0},{y:2017,c:1946.7,d:0},{y:2017,c:1838.3,d:0},{y:2017,c:160000,d:89},{y:2017,c:64000,d:97},{y:2017,c:115200,d:2981},{y:2017,c:23226.5,d:54},{y:2017,c:3250,d:0},
+  {y:2018,c:1324.6,d:22},{y:2018,c:2786.4,d:9},{y:2018,c:1844.1,d:0},{y:2018,c:1660.7,d:3},{y:2018,c:1751.3,d:0},{y:2018,c:1726.2,d:5},{y:2018,c:1625,d:0},{y:2018,c:1193.8,d:0},{y:2018,c:2778.8,d:0},{y:2018,c:1981.6,d:0},{y:2018,c:1063.8,d:0},{y:2018,c:1281.4,d:0},{y:2018,c:30000,d:53},{y:2018,c:31218.8,d:49},{y:2018,c:3797.4,d:0},{y:2018,c:30000,d:106},
+  {y:2019,c:1547.2,d:2},{y:2019,c:1903.4,d:0},{y:2019,c:13408.9,d:3},{y:2019,c:1540,d:7},{y:2019,c:1862.4,d:0},{y:2019,c:1196.9,d:0},{y:2019,c:5655.6,d:3},{y:2019,c:3720.8,d:5},{y:2019,c:1239.8,d:0},{y:2019,c:7649.6,d:4},{y:2019,c:1980.3,d:10},{y:2019,c:6150,d:5},{y:2019,c:2113.1,d:2},{y:2019,c:5535,d:3},
+  {y:2020,c:1401.8,d:10},{y:2020,c:1532.2,d:3},{y:2020,c:2850,d:25},{y:2020,c:3120.9,d:0},{y:2020,c:3543.9,d:0},{y:2020,c:4236.2,d:35},{y:2020,c:1660.6,d:3},{y:2020,c:1263.3,d:1},{y:2020,c:2598.9,d:2},{y:2020,c:1948.6,d:2},{y:2020,c:1722,d:0},{y:2020,c:1459.1,d:0},{y:2020,c:1300.8,d:0},{y:2020,c:5756.1,d:16},{y:2020,c:13452.9,d:4},{y:2020,c:28090.3,d:42},{y:2020,c:8801.5,d:5},{y:2020,c:3469.3,d:5},{y:2020,c:5266,d:6},{y:2020,c:1766.7,d:12},{y:2020,c:19904.5,d:46},{y:2020,c:5439.1,d:45},
+  {y:2021,c:1325,d:2},{y:2021,c:27223.2,d:262},{y:2021,c:1995.8,d:6},{y:2021,c:1601.9,d:8},{y:2021,c:1755.3,d:0},{y:2021,c:3747.4,d:0},{y:2021,c:1479.1,d:4},{y:2021,c:1569.6,d:5},{y:2021,c:1980.1,d:0},{y:2021,c:1453.6,d:0},{y:2021,c:1407.1,d:1},{y:2021,c:1252.8,d:0},{y:2021,c:1489.5,d:2},{y:2021,c:1481.3,d:7},{y:2021,c:84608.1,d:96},{y:2021,c:1168.5,d:0},{y:2021,c:4463.1,d:93},{y:2021,c:2031.5,d:1},{y:2021,c:12064,d:8},{y:2021,c:10201.9,d:229},
+  {y:2022,c:1118.9,d:0},{y:2022,c:1381.6,d:2},{y:2022,c:1544.8,d:3},{y:2022,c:2915.7,d:1},{y:2022,c:1230.1,d:1},{y:2022,c:2354.4,d:0},{y:2022,c:2949.6,d:1},{y:2022,c:2625.4,d:0},{y:2022,c:2025.7,d:0},{y:2022,c:3386.6,d:1},{y:2022,c:1420.4,d:1},{y:2022,c:1552.9,d:42},{y:2022,c:2685.7,d:25},{y:2022,c:119626,d:152},{y:2022,c:1081.2,d:5},{y:2022,c:3296.6,d:17},{y:2022,c:8951.7,d:87},{y:2022,c:23480.6,d:136},
+  {y:2023,c:1838.8,d:1},{y:2023,c:6170,d:13},{y:2023,c:4725,d:22},{y:2023,c:2956,d:23},{y:2023,c:5909.8,d:33},{y:2023,c:2956.1,d:5},{y:2023,c:1144,d:0},{y:2023,c:1401.9,d:0},{y:2023,c:3108.3,d:1},{y:2023,c:1372.8,d:0},{y:2023,c:2222.5,d:1},{y:2023,c:3563,d:1},{y:2023,c:1690,d:0},{y:2023,c:4420,d:2},{y:2023,c:4193.2,d:0},{y:2023,c:3918.7,d:5},{y:2023,c:5453.9,d:8},{y:2023,c:1976.8,d:3},{y:2023,c:2230.4,d:10},{y:2023,c:1887,d:1},{y:2023,c:1526.6,d:2},{y:2023,c:5665,d:100},{y:2023,c:1680.2,d:4},{y:2023,c:1828.3,d:0},{y:2023,c:3559.7,d:5},{y:2023,c:1694.5,d:0},{y:2023,c:14786.7,d:247},{y:2023,c:1314.4,d:5},
+  {y:2024,c:2780.2,d:3},{y:2024,c:1723.8,d:20},{y:2024,c:1948.3,d:41},{y:2024,c:1072,d:0},{y:2024,c:1534,d:0},{y:2024,c:6151.6,d:3},{y:2024,c:2465.5,d:3},{y:2024,c:2725.1,d:0},{y:2024,c:1697.8,d:3},{y:2024,c:6571,d:3},{y:2024,c:1124,d:1},{y:2024,c:1551,d:8},{y:2024,c:4907.8,d:5},{y:2024,c:3466.4,d:16},{y:2024,c:2348.3,d:1},{y:2024,c:3012.8,d:0},{y:2024,c:1228,d:0},{y:2024,c:1113,d:4},{y:2024,c:1704,d:3},{y:2024,c:1780,d:2},{y:2024,c:7219,d:46},{y:2024,c:2435,d:2},{y:2024,c:2476,d:17},{y:2024,c:1291,d:0},{y:2024,c:78721,d:219},{y:2024,c:34250,d:32},{y:2024,c:5417,d:136}
+];
+
+const byYear={};
+raw.forEach(r=>{
+  if(!byYear[r.y]) byYear[r.y]={year:r.y,cost:0,deaths:0,count:0};
+  byYear[r.y].cost+=r.c/1000;
+  byYear[r.y].deaths+=r.d;
+  byYear[r.y].count++;
+});
+const yd=Object.values(byYear).sort((a,b)=>a.year-b.year);
+
+const byDec={};
+yd.forEach(d=>{
+  const dec=Math.floor(d.year/10)*10+"s";
+  if(!byDec[dec]) byDec[dec]={dec,cost:0,deaths:0,count:0};
+  byDec[dec].cost=+(byDec[dec].cost+d.cost).toFixed(1);
+  byDec[dec].deaths+=d.deaths;
+  byDec[dec].count+=d.count;
+});
+const dd=Object.values(byDec);
+
+const BLUE="#1e3a6e", RED="#c0392b";
+
+new Chart(document.getElementById("costChart"),{
+  type:"line",
+  data:{
+    labels:yd.map(d=>d.year),
+    datasets:[{
+      label:"Economic Damage ($B)",
+      data:yd.map(d=>+d.cost.toFixed(1)),
+      borderColor:BLUE,borderWidth:2,
+      backgroundColor:"rgba(30,58,110,0.12)",
+      fill:true,pointRadius:2,pointHoverRadius:5,tension:0.3
+    }]
+  },
+  options:{
+    responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${c.parsed.y}B`}}},
+    scales:{
+      x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{size:11}}},
+      y:{grid:{color:"#f0f0f0"},ticks:{callback:v=>`$${v}B`,font:{size:11}}}
+    }
+  }
+});
+
+new Chart(document.getElementById("deathChart"),{
+  type:"line",
+  data:{
+    labels:yd.map(d=>d.year),
+    datasets:[{
+      label:"Deaths",
+      data:yd.map(d=>d.deaths),
+      borderColor:RED,borderWidth:2,
+      backgroundColor:"rgba(192,57,43,0.12)",
+      fill:true,pointRadius:2,pointHoverRadius:5,tension:0.3
+    }]
+  },
+  options:{
+    responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toLocaleString()+" deaths"}}},
+    scales:{
+      x:{grid:{display:false},ticks:{maxTicksLimit:10,font:{size:11}}},
+      y:{grid:{color:"#f0f0f0"},ticks:{font:{size:11}}}
+    }
+  }
+});
+
+new Chart(document.getElementById("decadeChart"),{
+  type:"bar",
+  data:{
+    labels:dd.map(d=>d.dec),
+    datasets:[
+      {label:"Economic Damage ($B)",data:dd.map(d=>+d.cost.toFixed(0)),backgroundColor:BLUE+"cc",borderRadius:4,yAxisID:"y"},
+      {label:"Lives Lost",data:dd.map(d=>d.deaths),backgroundColor:RED+"cc",borderRadius:4,yAxisID:"y2"}
+    ]
+  },
+  options:{
+    responsive:true,
+    plugins:{legend:{labels:{font:{size:12}}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:12}}},
+      y:{grid:{color:"#f0f0f0"},ticks:{callback:v=>`$${v}B`,font:{size:11}},position:"left"},
+      y2:{grid:{display:false},ticks:{font:{size:11}},position:"right"}
+    }
+  }
+});
+
+function switchTab(id,btn){
+  document.querySelectorAll(".chart-wrap").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(el=>el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  btn.classList.add("active");
+}
+</script>
+</body>
+</html>
